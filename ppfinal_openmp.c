@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <omp.h>
+#define RAND_INNER_BUFFER_SIZE 64
 
 int M; //模擬次數
 int N; //期
@@ -11,11 +13,17 @@ static inline double normalCDF(double value){
 
 const double mean = 0;
 const double std = 1;
+struct random_data *rand_buffer;
+char **rand_inner_buffer;
 
 double normal(){
+    int ID = omp_get_thread_num();
+    int32_t i, j;
     double u, v, x;
-    u = rand() / (double) RAND_MAX;
-    v = rand() / (double) RAND_MAX;
+    random_r(&rand_buffer[ID], &i);
+    random_r(&rand_buffer[ID], &j);
+    u = (double) i / RAND_MAX;
+    v = (double) j / RAND_MAX;
     x = sqrt(-2 * log(u)) * cos(2 * M_PI * v) * std + mean;
     return x;
 }
@@ -68,16 +76,41 @@ int main(int argc , char *argv []){
     bls = blsprice(S, L, T, r, vol);
     printf("bls定價模型算出之價格 %lf\n", bls);
 
+    // allocate seedp for each thread
+    FILE* fp = fopen("/dev/urandom", "r");    
+
+    int max_num_threads = omp_get_max_threads();
+    rand_inner_buffer = malloc(max_num_threads * sizeof *rand_inner_buffer);
+    for (int i = 0; i < max_num_threads; i++)
+        rand_inner_buffer[i] = calloc(RAND_INNER_BUFFER_SIZE, sizeof *rand_inner_buffer[i]);
+
+    rand_buffer = calloc(max_num_threads, sizeof *rand_buffer);
+    for (int i = 0; i < max_num_threads; i++){
+        unsigned int seed;
+        if (fread(&seed, sizeof(unsigned int), 1, fp) != 1) exit(1);
+        initstate_r(seed, rand_inner_buffer[i], RAND_INNER_BUFFER_SIZE, &rand_buffer[i]);
+    }
+
+    fclose(fp);
+
+    #pragma omp parallel for reduction (+:call) private(Sa)
     for(int j = 0; j < M; j++){
         Sa = MCsim(S, T, r, vol, N); //Sa存每一期變動完的價格
+        int SA_P = 0;
         if(Sa - L > 0){ //有大於0才會執行(才有獲利)
-            call += (Sa - L); //算期望值
-        } 
+            SA_P = Sa - L;
+        }
+        call += SA_P; //算期望值
     }
 
     mp = call / M * exp(-r * T);
     printf("蒙地卡羅預測可獲利 %lf\n", mp);
     dif = fabs(mp - bls);
     printf("誤差 %lf\n", dif);
+
+    for (int i = 0; i < max_num_threads; i++)
+        free(rand_inner_buffer[i]);
+    free(rand_inner_buffer);
+    free(rand_buffer);
     return 0;
 }

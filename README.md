@@ -9,8 +9,13 @@
 
 ## 20191208
 - **add** copied `ppfinal.c` to `ppfinal_openmp.c`
-- **add** Makefile for `ppfinal_openmp`
+- **add** `Makefile` for `ppfinal_openmp`
 - **change** changed all `float` type variables into type of `double`
 - **change** fixed some bugs in `ppfinal_openmp.c`
+
+---
+## 20191209
+- **add** use omp to parallelize `ppfinal_openmp.c`
+- **bug** generated random numbers are not welled distributed thus causing huge error
 
 ---
