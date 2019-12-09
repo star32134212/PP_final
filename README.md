@@ -19,3 +19,10 @@
 - **bug** generated random numbers are not welled distributed thus causing huge error
 
 ---
+## 20191210
+- **add** `ppfinal_openmp.cpp` which uses random number generator in c++ std library
+- **change** `Makefile` now compiles `ppfinal_openmp.cpp` instead of `ppfinal_openmp.c`
+- **change** the RNG array now has a size of 4, implying that number of threads is bounded by 4
+- **solved** solved a **HUGE** bug causing wrong result: `ppfinal_openmp.c:99`(966d2be): local variable `SA_P` should be declared as type `double` instead of `int` (while this does not solve the distribution problem of RNGs under multithreading environment)
+
+---

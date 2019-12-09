@@ -1,8 +1,8 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <random>
 #include <omp.h>
-#define RAND_INNER_BUFFER_SIZE 64
 
 int M; //模擬次數
 int N; //期
@@ -11,20 +11,18 @@ static inline double normalCDF(double value){
    return 0.5 * erfc(-value * M_SQRT1_2);
 }
 
-const double mean = 0;
-const double std = 1;
-struct random_data *rand_buffer;
-char **rand_inner_buffer;
+const double MEAN = 0;
+const double STD = 1;
+
+std::uniform_real_distribution<double> distribution(0.0, 1.0);
+std::mt19937 generator[4];
 
 double normal(){
     int ID = omp_get_thread_num();
-    int32_t i, j;
     double u, v, x;
-    random_r(&rand_buffer[ID], &i);
-    random_r(&rand_buffer[ID], &j);
-    u = (double) i / RAND_MAX;
-    v = (double) j / RAND_MAX;
-    x = sqrt(-2 * log(u)) * cos(2 * M_PI * v) * std + mean;
+    u = distribution(generator[ID]);
+    v = distribution(generator[ID]);
+    x = sqrt(-2 * log(u)) * cos(2 * M_PI * v) * STD + MEAN;
     return x;
 }
 
@@ -67,7 +65,7 @@ double r = 0.08;
 double vol = 0.2;
 double call = 0;
 
-int main(int argc , char *argv []){ 
+int main(int argc , char *argv []){
     N = atoi(argv[1]);
     M = atoi(argv[2]);
     double bls, mp;
@@ -76,27 +74,15 @@ int main(int argc , char *argv []){
     bls = blsprice(S, L, T, r, vol);
     printf("bls定價模型算出之價格 %lf\n", bls);
 
-    // allocate seedp for each thread
-    FILE* fp = fopen("/dev/urandom", "r");    
+    // seed generators of threads
+    for (int i = 0; i < 4; i++)
+        generator[i].seed(i);
 
-    int max_num_threads = omp_get_max_threads();
-    rand_inner_buffer = malloc(max_num_threads * sizeof *rand_inner_buffer);
-    for (int i = 0; i < max_num_threads; i++)
-        rand_inner_buffer[i] = calloc(RAND_INNER_BUFFER_SIZE, sizeof *rand_inner_buffer[i]);
-
-    rand_buffer = calloc(max_num_threads, sizeof *rand_buffer);
-    for (int i = 0; i < max_num_threads; i++){
-        unsigned int seed;
-        //if (fread(&seed, sizeof(unsigned int), 1, fp) != 1) exit(1);
-        initstate_r(i, rand_inner_buffer[i], RAND_INNER_BUFFER_SIZE, &rand_buffer[i]);
-    }
-
-    fclose(fp);
-
-    #pragma omp parallel for reduction (+:call) private(Sa)
+    // max threads num must limited by 4 (for convenience) 
+    #pragma omp parallel for reduction(+:call) private(Sa)
     for(int j = 0; j < M; j++){
         Sa = MCsim(S, T, r, vol, N); //Sa存每一期變動完的價格
-        int SA_P = 0;
+        double SA_P = 0;
         if(Sa - L > 0){ //有大於0才會執行(才有獲利)
             SA_P = Sa - L;
         }
@@ -108,9 +94,5 @@ int main(int argc , char *argv []){
     dif = fabs(mp - bls);
     printf("誤差 %lf\n", dif);
 
-    for (int i = 0; i < max_num_threads; i++)
-        free(rand_inner_buffer[i]);
-    free(rand_inner_buffer);
-    free(rand_buffer);
     return 0;
 }
