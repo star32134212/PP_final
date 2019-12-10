@@ -5,7 +5,7 @@
 第一個參數是分幾期 第二個參數是蒙地卡羅模擬次數
 `lm`是link libm，有用到`<math.h>`的話要用
 平行化後的檔案是`ppfinal_openmp.c`
-slide : [連結](https://docs.google.com/presentation/d/1Mk6xiOcPyFfEpcK95i6YivoAR7tO4QDzGo8LA8WZXPo/edit#slide=id.p)  
+slide : [連結](https://docs.google.com/presentation/d/1Mk6xiOcPyFfEpcK95i6YivoAR7tO4QDzGo8LA8WZXPo/edit?usp=sharing)  
 ## 20191208
 - **add** copied `ppfinal.c` to `ppfinal_openmp.c`
 - **add** `Makefile` for `ppfinal_openmp`
