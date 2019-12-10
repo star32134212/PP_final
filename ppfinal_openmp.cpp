@@ -1,6 +1,7 @@
-#include <cstdio>
-#include <cstdlib>
+#include <iostream>
+#include <iomanip>
 #include <cmath>
+#include <vector>
 #include <random>
 #include <omp.h>
 
@@ -15,7 +16,7 @@ const double MEAN = 0;
 const double STD = 1;
 
 std::uniform_real_distribution<double> distribution(0.0, 1.0);
-std::mt19937 generator[4];
+std::vector<std::mt19937> generator;
 
 double normal(){
     int ID = omp_get_thread_num();
@@ -63,7 +64,7 @@ double L = 40.0;
 double T = 2.0;
 double r = 0.08;
 double vol = 0.2;
-double call = 0;
+double call = 0.0;
 
 int main(int argc , char *argv []){
     N = atoi(argv[1]);
@@ -72,17 +73,19 @@ int main(int argc , char *argv []){
     double dif;
     double Sa;
     bls = blsprice(S, L, T, r, vol);
-    printf("bls定價模型算出之價格 %lf\n", bls);
+    std::cout << "bls定價模型算出之價格 " << std::fixed << std::setprecision(9)
+        << bls << std::endl;
 
     // seed generators of threads
-    for (int i = 0; i < 4; i++)
-        generator[i].seed(i);
+    int max_num_threads = omp_get_max_threads();
+    for (int i = 0; i < max_num_threads; i++)
+        generator.push_back(std::mt19937(i));
 
     // max threads num must limited by 4 (for convenience) 
     #pragma omp parallel for reduction(+:call) private(Sa)
     for(int j = 0; j < M; j++){
         Sa = MCsim(S, T, r, vol, N); //Sa存每一期變動完的價格
-        double SA_P = 0;
+        double SA_P = 0.0;
         if(Sa - L > 0){ //有大於0才會執行(才有獲利)
             SA_P = Sa - L;
         }
@@ -90,9 +93,12 @@ int main(int argc , char *argv []){
     }
 
     mp = call / M * exp(-r * T);
-    printf("蒙地卡羅預測可獲利 %lf\n", mp);
     dif = fabs(mp - bls);
-    printf("誤差 %lf\n", dif);
+
+    std::cout << "蒙地卡羅預測可獲利 " << std::fixed << std::setprecision(9)
+        << mp << std::endl;
+    std::cout << "誤差 " << std::fixed << std::setprecision(9)
+        << dif << std::endl;
 
     return 0;
 }
