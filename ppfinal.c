@@ -78,7 +78,7 @@ int main(int argc , char *argv []) {
 
     mp = call/M*exp(-r*T); 
     printf("蒙地卡羅預測可獲利 %f\n",mp);
-    //dif = fabs(mp - bls);
-    //printf("誤差 ％lf\n",dif);
+    dif = fabs(mp - bls);
+    printf("誤差 %lf\n",dif);
     return 0;
 }
