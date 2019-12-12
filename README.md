@@ -27,3 +27,8 @@
 - **change** minor updates to `ppfinal_openmp.cpp`
 
 ---
+## 20191212
+- **add** add `test.sh` which automatically runs `ppfinal` for several testcases
+- **add** add several test results in `TestResults/` (arranged from output of `test.sh`)
+
+---
